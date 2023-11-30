@@ -7,31 +7,33 @@ on:
       - main
 
 jobs:
-  build:
+  Build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Cache
+      - name: Checkout ⬇️ # Grab our repo
+        uses: actions/checkout@v2
+      
+      - name: Cache Library 📝 # We cache the library folder so that way it takes less time to run in subsequent builds
         uses: actions/cache@v3
         with:
-          path: path/to/your/project/Library
-          key: Library-MyProjectName-TargetPlatform
-          restore-keys: |
-            Library-DemoFPS-
-            Library-
-      - name: Checkout repository
-        uses: actions/checkout@v2
+          path: Library
+          key: Library
+          restore-keys: Library
 
-      - name: Unity - Builder
-        uses: game-ci/unity-builder@v4.1.1
+      - name: Build To WebGL 🛠️ # Use the Unity Builder action to build to WebGL
+        uses: game-ci/unity-builder@v2
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
         with:
           targetPlatform: WebGL
-      - name: Upload
-        uses: actions/upload-artifact@v3
+          unityVersion: 2022.3.8f1 # Replace with your unity version (find it in ProjectSettings/ProjectVersion.txt)
+          #allowDirtyBuild: true # Uncomment if you want to force the build
+
+      - name: Deploy To Pages 🚀 # Deploy the build to GitHub pages
+        uses: JamesIves/github-pages-deploy-action@4.1.5
         with:
-          name: Out
-          path: out
+          branch: gh-pages 
+          folder: build/WebGL/WebGL
