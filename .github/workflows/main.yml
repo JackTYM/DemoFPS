@@ -11,6 +11,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: path/to/your/project/Library
+          key: Library-MyProjectName-TargetPlatform
+          restore-keys: |
+            Library-DemoFPS-
+            Library-
       - name: Checkout repository
         uses: actions/checkout@v2
 
@@ -22,3 +30,8 @@ jobs:
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
         with:
           targetPlatform: WebGL
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: Build
+          path: build
