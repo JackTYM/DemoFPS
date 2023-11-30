@@ -31,8 +31,8 @@ public class Weapon : MonoBehaviour
 
     public WeaponType weapon;
     public List<MeshDictionaryItem> meshDictionaryList = new List<MeshDictionaryItem>();
-    public int bulletsLeft;
     public bool inAnim = false;
+    public Dictionary<WeaponType, int> bulletsLeft = new Dictionary<WeaponType, int>();
 
     private Dictionary<WeaponType, MeshDictionaryItem> meshDictionary;
     private Animator anim;
@@ -40,7 +40,7 @@ public class Weapon : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        BuildMeshDictionary();
+        BuildDictionaries();
 
         SetWeapon(weapon);
     }
@@ -48,7 +48,7 @@ public class Weapon : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        transform.parent.GetChild(1).GetChild(0).GetComponent<TMPro.TMP_Text>().text = bulletsLeft + "/" + meshDictionary[weapon].clip;
+        transform.parent.GetChild(1).GetChild(0).GetComponent<TMPro.TMP_Text>().text = bulletsLeft[weapon] + "/" + meshDictionary[weapon].clip;
     }
 
     void FixedUpdate()
@@ -70,18 +70,18 @@ public class Weapon : MonoBehaviour
 
     public void Reload(InputAction.CallbackContext context)
     {
-        if (context.performed && !inAnim && bulletsLeft != meshDictionary[weapon].clip)
+        if (context.performed && !inAnim && bulletsLeft[weapon] != meshDictionary[weapon].clip)
         {
-            anim.Play("Reload", -1, 0);
             inAnim = true;
-            Invoke("EndAnimation", anim.runtimeAnimatorController.animationClips.FirstOrDefault(clip => clip.name.Contains("Reload")).length);
+            anim.Play("Reload", -1, 0);
             Invoke("ReloadBullets", anim.runtimeAnimatorController.animationClips.FirstOrDefault(clip => clip.name.Contains("Reload")).length);
+            Invoke("EndAnimation", anim.runtimeAnimatorController.animationClips.FirstOrDefault(clip => clip.name.Contains("Reload")).length);
         }
     }
 
     public void Shoot(InputAction.CallbackContext context)
     {
-        if (bulletsLeft == 0)
+        if (bulletsLeft[weapon] == 0)
         {
             Reload(context);
         }
@@ -97,7 +97,7 @@ public class Weapon : MonoBehaviour
                 if (meshDictionary[weapon].jump)
                 {
                     RaycastHit hit;
-                    if (Physics.Raycast(bullet.transform.position, transform.right, out hit, 10))
+                    if (Physics.Raycast(bullet.transform.position, transform.right, out hit, 15))
                     {
                         transform.parent.parent.parent.GetComponent<SurfCharacter>()._moveData.velocity += -transform.right * meshDictionary[weapon].jumpAmount;
                         transform.parent.parent.parent.GetComponent<SurfCharacter>()._controller.jumping = true;
@@ -105,12 +105,12 @@ public class Weapon : MonoBehaviour
                 }
 
                 Destroy(bullet, meshDictionary[weapon].bulletTime);
-                bulletsLeft--;
+                bulletsLeft[weapon]--;
 
-                if (bulletsLeft > 0)
+                if (bulletsLeft[weapon] > 0)
                 {
-                    anim.Play("Cockback", -1, 0);
                     inAnim = true;
+                    anim.Play("Cockback", -1, 0);
                     Invoke("EndAnimation", anim.runtimeAnimatorController.animationClips.FirstOrDefault(clip => clip.name.Contains("Cockback")).length);
                 }
             }
@@ -119,25 +119,29 @@ public class Weapon : MonoBehaviour
 
     void SetWeapon(WeaponType type)
     {
-        foreach (Transform child in transform) {
-            Destroy(child.gameObject);
-        }
         weapon = type;
-        transform.localPosition = meshDictionary[type].position;
-        transform.localEulerAngles = meshDictionary[type].rotation;
-        Instantiate(meshDictionary[type].prefab, transform);
-        anim = transform.GetChild(0).GetComponent<Animator>();
-        bulletsLeft = meshDictionary[type].clip;
-        inAnim = false;
+        transform.localPosition = meshDictionary[weapon].position;
+        transform.localEulerAngles = meshDictionary[weapon].rotation;
+        foreach (Transform t in transform) {
+            if (!t.gameObject.name.Contains(type.ToString())) {
+                t.gameObject.SetActive(false);
+            } else {
+                t.gameObject.SetActive(true);
+                anim = t.gameObject.GetComponent<Animator>();
+            }
+        }
     }
 
-    void BuildMeshDictionary()
+    void BuildDictionaries()
     {
         meshDictionary = new Dictionary<WeaponType, MeshDictionaryItem>();
 
         foreach (var item in meshDictionaryList)
         {
             meshDictionary[item.meshType] = item;
+            bulletsLeft[item.meshType] = item.clip;
+
+            Instantiate(item.prefab, transform);
         }
     }
 
@@ -148,12 +152,6 @@ public class Weapon : MonoBehaviour
 
     void ReloadBullets()
     {
-        bulletsLeft = meshDictionary[weapon].clip;
-    }
-
-    bool AnimatorIsPlaying()
-    {
-        return anim.GetCurrentAnimatorStateInfo(0).length >
-            anim.GetCurrentAnimatorStateInfo(0).normalizedTime;
+        bulletsLeft[weapon] = meshDictionary[weapon].clip;
     }
 }
